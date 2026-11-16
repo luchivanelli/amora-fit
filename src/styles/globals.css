@@ -1,0 +1,316 @@
+@import "tailwindcss";
+
+/* Modo oscuro por clase en <html> (la decide theme-script.tsx antes del primer render). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   Tokens de color. Cambian con .dark; Tailwind los expone como
+   bg-cream, text-ink, border-sand-dark, bg-brand-600, etc.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  --t-cream: #faf8f3;
+  --t-surface: #ffffff;
+  --t-surface-2: #f4f1ea;
+  --t-sand: #efe9df;
+  --t-sand-dark: #e2dacc;
+  --t-ink: #2b2a26;
+  --t-ink-soft: #6b685f;
+  --t-ink-muted: #9b978c;
+
+  /* Marca AMORA: verde oliva #767c4e como 600 */
+  --t-brand-50: #f6f7f1;
+  --t-brand-100: #eaece0;
+  --t-brand-200: #d6dac3;
+  --t-brand-300: #b9bf9c;
+  --t-brand-400: #9ba378;
+  --t-brand-500: #8a9160;
+  --t-brand-600: #767c4e;
+  --t-brand-700: #5e6340;
+  --t-brand-800: #4c5036;
+  --t-brand-900: #40432f;
+  --t-brand-950: #22241a;
+  --t-brand-hover: #5e6340;
+  --t-brand-active: #4c5036;
+
+  /* Acento cálido (rosa empolvado) para detalles ilustrativos */
+  --t-blush: #e4a899;
+  --t-blush-soft: #fbeeea;
+  --t-blush-deep: #b9705f;
+
+  /* Estados */
+  --t-danger: #b42318;
+  --t-danger-soft: #fdf1ef;
+  --t-warn: #8a4b06;
+  --t-warn-soft: #fff6e3;
+  --t-info: #0b4f6c;
+  --t-info-soft: #e3f3fb;
+
+  --t-shadow-soft: 0 12px 40px -14px rgba(43, 42, 38, 0.22);
+  --t-shadow-lift: 0 24px 60px -20px rgba(43, 42, 38, 0.3);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --t-cream: #15140f;
+  --t-surface: #1e1d17;
+  --t-surface-2: #26251e;
+  --t-sand: #2b2a22;
+  --t-sand-dark: #3d3b31;
+  --t-ink: #f3f0e8;
+  --t-ink-soft: #cbc7ba;
+  --t-ink-muted: #908c80;
+
+  --t-brand-50: #1e2117;
+  --t-brand-100: #272b1d;
+  --t-brand-200: #353a26;
+  --t-brand-300: #7f865a;
+  --t-brand-400: #9ba378;
+  --t-brand-500: #aab27f;
+  --t-brand-600: #7d845a;
+  --t-brand-700: #bcc29f;
+  --t-brand-800: #d6dac3;
+  --t-brand-900: #eaece0;
+  --t-brand-950: #f6f7f1;
+  --t-brand-hover: #8f9668;
+  --t-brand-active: #9ba378;
+
+  --t-blush: #d9958a;
+  --t-blush-soft: #3a2622;
+  --t-blush-deep: #e9b3a6;
+
+  --t-danger: #f58d82;
+  --t-danger-soft: #3a1f1c;
+  --t-warn: #f2c26b;
+  --t-warn-soft: #3a2d14;
+  --t-info: #86cff2;
+  --t-info-soft: #12303d;
+
+  --t-shadow-soft: 0 12px 40px -14px rgba(0, 0, 0, 0.6);
+  --t-shadow-lift: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-display), ui-serif, Georgia, serif;
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+
+  --color-cream: var(--t-cream);
+  --color-surface: var(--t-surface);
+  --color-surface-2: var(--t-surface-2);
+  --color-sand: var(--t-sand);
+  --color-sand-dark: var(--t-sand-dark);
+  --color-ink: var(--t-ink);
+  --color-ink-soft: var(--t-ink-soft);
+  --color-ink-muted: var(--t-ink-muted);
+
+  --color-brand-50: var(--t-brand-50);
+  --color-brand-100: var(--t-brand-100);
+  --color-brand-200: var(--t-brand-200);
+  --color-brand-300: var(--t-brand-300);
+  --color-brand-400: var(--t-brand-400);
+  --color-brand-500: var(--t-brand-500);
+  --color-brand-600: var(--t-brand-600);
+  --color-brand-700: var(--t-brand-700);
+  --color-brand-800: var(--t-brand-800);
+  --color-brand-900: var(--t-brand-900);
+  --color-brand-950: var(--t-brand-950);
+  --color-brand-hover: var(--t-brand-hover);
+  --color-brand-active: var(--t-brand-active);
+
+  --color-blush: var(--t-blush);
+  --color-blush-soft: var(--t-blush-soft);
+  --color-blush-deep: var(--t-blush-deep);
+
+  --color-danger: var(--t-danger);
+  --color-danger-soft: var(--t-danger-soft);
+  --color-warn: var(--t-warn);
+  --color-warn-soft: var(--t-warn-soft);
+  --color-info: var(--t-info);
+  --color-info-soft: var(--t-info-soft);
+
+  /* Fijos: no cambian con el tema (van sobre fotos) */
+  --color-scrim: #0f0e0b;
+  --color-paper: #faf8f3;
+  --color-olive-light: #d6dac3;
+
+  --shadow-soft: var(--t-shadow-soft);
+  --shadow-lift: var(--t-shadow-lift);
+}
+
+@theme {
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+  --radius-4xl: 2.5rem;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 9s ease-in-out infinite;
+  --animate-marquee: marquee 28s linear infinite;
+  --animate-spin-slow: spin 18s linear infinite;
+  --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-wiggle: wiggle 1.6s ease-in-out infinite;
+  --animate-pop: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-14px) rotate(1.5deg); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+  }
+  @keyframes pop {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    font-size: 16px;
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
+  h1, h2, h3 {
+    @apply font-display tracking-tight;
+    font-variation-settings: "SOFT" 60, "WONK" 0;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--t-brand-400) 45%, transparent);
+  }
+  /* Foco visible y consistente para teclado */
+  :focus-visible {
+    outline: 3px solid var(--t-brand-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  dialog::backdrop {
+    background: rgba(15, 14, 11, 0.55);
+    backdrop-filter: blur(2px);
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  img {
+    transition: filter 0.35s ease;
+  }
+  .dark img.theme-dim {
+    filter: brightness(0.92);
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+  .tap-target {
+    min-height: 44px;
+  }
+  /* Textura de grano sutil sobre fondos degradados */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .dark .grain::after {
+    opacity: 0.12;
+    mix-blend-mode: screen;
+  }
+  /* Texto con degradado de marca */
+  .text-gradient {
+    background: linear-gradient(100deg, var(--t-brand-500), var(--t-brand-700) 55%, var(--t-blush-deep));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Subrayado "a mano" con SVG */
+  .underline-squiggle {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M2 9c30-8 60-8 98-3s70 4 98-4' fill='none' stroke='%23e4a899' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 0.32em;
+    padding-bottom: 0.12em;
+  }
+  /* Cards que se elevan al pasar el mouse */
+  .lift {
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+  }
+  .lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--t-shadow-lift);
+  }
+  /* Enlaces con subrayado animado */
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1.5px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 0.3s ease;
+  }
+  .link-underline:hover,
+  .link-underline[aria-current="page"] {
+    background-size: 100% 1.5px;
+  }
+  /* Esqueleto con brillo que se desplaza */
+  .skeleton {
+    background: linear-gradient(90deg, var(--t-sand) 25%, var(--t-sand-dark) 50%, var(--t-sand) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .pause-on-hover:hover > * {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+button {
+  cursor: pointer;
+}

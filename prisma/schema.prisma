@@ -1,0 +1,436 @@
+// AMORA — schema.prisma (Prisma 6 + Neon PostgreSQL)
+// Convención: modelos y enums en inglés; los estados de pedido en español (requisito de negocio).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // Neon pooled (pgbouncer) — runtime
+  directUrl = env("DIRECT_URL") // Neon directa — migraciones
+}
+
+// ─────────────────────────── ENUMS ───────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum PaymentMethod {
+  MERCADO_PAGO
+  ACORDAR_CON_VENDEDOR
+}
+
+enum OrderStatus {
+  PENDIENTE_ACUERDO
+  PENDIENTE_PAGO
+  PAGADO
+  PREPARANDO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+}
+
+enum PaymentStatus {
+  PENDING
+  IN_PROCESS
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum StockMovementReason {
+  INITIAL
+  ADMIN_ADJUSTMENT
+  ORDER_RESERVED
+  ORDER_RELEASED
+}
+
+// ─────────────────────────── AUTH ───────────────────────────
+// Auth.js v5 con estrategia JWT (obligatoria al usar el provider Credentials).
+// Por eso no hay modelo Session: Account solo vincula cuentas de Google.
+
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  email            String    @unique
+  emailVerified    DateTime?
+  image            String?
+  passwordHash     String? // null si solo ingresa con Google
+  phone            String?
+  role             Role      @default(CUSTOMER)
+  onboardingSeenAt DateTime? // admin: ya vio el recorrido guiado
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  accounts  Account[]
+  addresses Address[]
+  orders    Order[]
+  favorites Favorite[]
+  cart      Cart?
+
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  email     String
+  token     String    @unique // hash del token enviado por mail
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String   @default("Casa")
+  fullName  String
+  phone     String
+  street    String // calle y número
+  apartment String? // piso / depto
+  city      String
+  province  String
+  zip       String
+  notes     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────── CATÁLOGO ───────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?
+  parentId    String? // null => categoría raíz (Ropa íntima / Ropa deportiva)
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parentId])
+  @@index([isActive, position])
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  name           String
+  slug           String        @unique
+  description    String        @db.Text
+  shortDesc      String?
+  categoryId     String // subcategoría (hoja); la raíz se infiere por el árbol
+  status         ProductStatus @default(DRAFT)
+  price          Decimal       @db.Decimal(10, 2) // precio base; la variante puede sobreescribirlo
+  compareAtPrice Decimal?      @db.Decimal(10, 2) // precio tachado (oferta)
+  isFeatured     Boolean       @default(false)
+  isNew          Boolean       @default(false) // etiqueta "Nuevo ingreso"
+  sizeGuide      String?       @db.Text // guía de talles (markdown simple)
+  material       String?
+  care           String?
+  metaTitle      String?
+  metaDesc       String?
+  position       Int           @default(0)
+  deletedAt      DateTime? // archivado (la dueña lo ve como "Eliminar")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  category   Category         @relation(fields: [categoryId], references: [id])
+  variants   ProductVariant[]
+  images     ProductImage[]
+  favorites  Favorite[]
+  orderItems OrderItem[]
+
+  @@index([categoryId, status])
+  @@index([status, isFeatured])
+  @@index([status, createdAt])
+  @@index([status, price])
+  @@index([deletedAt, status])
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  size      String // "XS" | "S" | "M" | "L" | "XL" | "85" | "90" ...
+  color     String // nombre legible: "Oliva", "Crema"
+  colorHex  String? // "#767c4e" para el swatch; varios tonos separados por coma: "#ffffff,#1f1f1f"
+  sku       String   @unique
+  stock     Int      @default(0)
+  price     Decimal? @db.Decimal(10, 2) // null => usa Product.price
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@unique([productId, size, color])
+  @@index([productId])
+  @@index([size])
+  @@index([color])
+  @@index([stock])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  publicId  String? // id en Cloudinary, para poder borrarla
+  alt       String?
+  color     String? // nombre del color (ProductVariant.color) al que pertenece la foto; null => todos
+  position  Int      @default(0)
+  isMain    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, position])
+}
+
+// Auditoría de stock: cada reserva/liberación/ajuste deja rastro.
+model StockMovement {
+  id        String              @id @default(cuid())
+  variantId String
+  delta     Int // +/- unidades
+  reason    StockMovementReason
+  orderId   String?
+  note      String?
+  createdAt DateTime            @default(now())
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  order   Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt])
+  @@index([orderId])
+}
+
+// ─────────────────────────── CARRITO ───────────────────────────
+// Invitado: cookie httpOnly `amora_cart` = Cart.token. Logueado: Cart.userId.
+// Al iniciar sesión el carrito de la cookie se fusiona con el del usuario.
+
+model Cart {
+  id        String    @id @default(cuid())
+  token     String    @unique @default(cuid())
+  userId    String?   @unique
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@index([expiresAt])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+}
+
+// ─────────────────────────── PEDIDOS ───────────────────────────
+
+model Order {
+  id            String        @id @default(cuid())
+  number        Int           @unique @default(autoincrement()) // nº visible: AM-000123
+  userId        String? // null => compra como invitado
+  status        OrderStatus
+  paymentMethod PaymentMethod
+
+  // Datos de contacto (siempre presentes, también para invitados)
+  contactName  String
+  contactPhone String
+  contactEmail String
+
+  // Entrega: dirección completa o solo "zona" (modo acordar)
+  shippingStreet   String?
+  shippingCity     String?
+  shippingProvince String?
+  shippingZip      String?
+  shippingZone     String? // texto libre: "Zona norte, Vicente López"
+  notes            String? @db.Text // observaciones del cliente
+  adminNotes       String? @db.Text // notas internas de la vendedora
+
+  // Montos (snapshot al momento de la compra)
+  subtotal     Decimal  @db.Decimal(10, 2)
+  discount     Decimal  @default(0) @db.Decimal(10, 2)
+  shippingCost Decimal? @db.Decimal(10, 2) // null => "a coordinar"
+  total        Decimal  @db.Decimal(10, 2) // subtotal - discount + (shippingCost ?? 0)
+
+  couponId   String?
+  couponCode String? // snapshot del código aplicado
+
+  // Reserva de stock: se descuenta al crear la orden; se devuelve al cancelar o vencer sin pago
+  stockReserved Boolean   @default(true)
+  expiresAt     DateTime? // solo MP: si no se paga antes, se cancela y libera stock
+  paidAt        DateTime?
+  cancelledAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  coupon         Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items          OrderItem[]
+  payment        Payment?
+  stockMovements StockMovement[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([paymentMethod, status])
+  @@index([contactEmail])
+  @@index([createdAt])
+  @@index([expiresAt, status])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String?
+  variantId String?
+
+  // Snapshot al momento de la compra (sobrevive a cambios o borrado del producto)
+  productName  String
+  productSlug  String
+  variantLabel String // "Talle M · Oliva"
+  sku          String
+  imageUrl     String?
+  unitPrice    Decimal @db.Decimal(10, 2)
+  quantity     Int
+  lineTotal    Decimal @db.Decimal(10, 2)
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// Solo para Mercado Pago. Opcional en Order.
+model Payment {
+  id           String        @id @default(cuid())
+  orderId      String        @unique
+  provider     String        @default("MERCADO_PAGO")
+  preferenceId String?       @unique
+  mpPaymentId  String?       @unique // id del pago en MP (llega por webhook)
+  status       PaymentStatus @default(PENDING)
+  statusDetail String?
+  amount       Decimal       @db.Decimal(10, 2)
+  currency     String        @default("ARS")
+  externalRef  String? // = order.id, para conciliar en el webhook
+  rawPayload   Json? // último payload recibido de MP
+  approvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+// ─────────────────────────── MARKETING ───────────────────────────
+
+model Coupon {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  description String?
+  type        DiscountType
+  value       Decimal      @db.Decimal(10, 2) // % o monto fijo según type
+  minSubtotal Decimal?     @db.Decimal(10, 2)
+  maxUses     Int?
+  usedCount   Int          @default(0)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  orders Order[]
+
+  @@index([isActive, expiresAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
