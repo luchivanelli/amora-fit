@@ -10,6 +10,8 @@ import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { fail, ok, zodFieldErrors, GENERIC_ERROR, type ActionResult, type FieldErrors } from "@/lib/action-result";
 import { cleanText } from "@/lib/utils";
 import { addressSchema, changePasswordSchema, profileSchema, registerSchema } from "@/lib/validations/shop";
+import { setSecurityQuestionSchema } from "@/lib/validations/auth";
+import { normalizeSecurityAnswer } from "@/lib/security-questions";
 
 export type AccountFormState = { error?: string; fieldErrors?: FieldErrors; success?: string };
 
@@ -26,14 +28,25 @@ export async function registerAction(_prev: AccountFormState, formData: FormData
     email: formData.get("email"),
     password: formData.get("password"),
     confirm: formData.get("confirm"),
+    securityQuestion: formData.get("securityQuestion"),
+    securityAnswer: formData.get("securityAnswer"),
   });
   if (!parsed.success) return { fieldErrors: zodFieldErrors(parsed.error.issues) };
-  const { name, email, password } = parsed.data;
+  const { name, email, password, securityQuestion, securityAnswer } = parsed.data;
 
   const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (exists) return { fieldErrors: { email: "Ya hay una cuenta con ese mail. Probá ingresar." } };
 
-  await prisma.user.create({ data: { name: cleanText(name), email, passwordHash: await bcrypt.hash(password, 12), role: "CUSTOMER" } });
+  await prisma.user.create({
+    data: {
+      name: cleanText(name),
+      email,
+      passwordHash: await bcrypt.hash(password, 12),
+      securityQuestion,
+      securityAnswerHash: await bcrypt.hash(normalizeSecurityAnswer(securityAnswer), 12),
+      role: "CUSTOMER",
+    },
+  });
 
   try {
     await signIn("credentials", { email, password, redirect: false });
@@ -78,6 +91,36 @@ export async function changePassword(_prev: AccountFormState, formData: FormData
     }
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(parsed.data.password, 12) } });
     return { success: "Contraseña actualizada." };
+  } catch {
+    return { error: GENERIC_ERROR };
+  }
+}
+
+/** Configura o cambia la pregunta de seguridad. Pide la contraseña actual. */
+export async function setSecurityQuestion(_prev: AccountFormState, formData: FormData): Promise<AccountFormState> {
+  try {
+    const user = await requireUser();
+    const parsed = setSecurityQuestionSchema.safeParse({
+      current: formData.get("current"),
+      question: formData.get("question"),
+      answer: formData.get("answer"),
+    });
+    if (!parsed.success) return { fieldErrors: zodFieldErrors(parsed.error.issues) };
+    const row = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+    if (!row?.passwordHash || !(await bcrypt.compare(parsed.data.current, row.passwordHash))) {
+      return { fieldErrors: { current: "La contraseña actual no es correcta." } };
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        securityQuestion: parsed.data.question,
+        securityAnswerHash: await bcrypt.hash(normalizeSecurityAnswer(parsed.data.answer), 12),
+        securityFailedAttempts: 0,
+        securityLockedUntil: null,
+      },
+    });
+    revalidatePath("/cuenta");
+    return { success: "Pregunta de seguridad guardada." };
   } catch {
     return { error: GENERIC_ERROR };
   }

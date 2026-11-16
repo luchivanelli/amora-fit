@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <li>Responder tus consultas.</li>
       </ul>
       <h2>Con quién los compartimos</h2>
-      <p>Solo con los servicios necesarios para operar la tienda: nuestro proveedor de mails y, cuando lo habilitemos, Mercado Pago (pagos). Nunca vendemos ni cedemos tus datos a terceros con fines publicitarios.</p>
+      <p>Solo con los servicios necesarios para operar la tienda: el servicio donde está alojada la tienda y, cuando lo habilitemos, Mercado Pago (pagos). Nunca vendemos ni cedemos tus datos a terceros con fines publicitarios.</p>
       <h2>Seguridad</h2>
       <p>Tu contraseña se guarda cifrada y toda la comunicación con la tienda viaja por HTTPS. No almacenamos datos de tarjetas.</p>
       <h2>Tus derechos</h2>

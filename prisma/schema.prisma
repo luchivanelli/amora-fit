@@ -72,6 +72,11 @@ model User {
   image            String?
   passwordHash     String? // null si solo ingresa con Google
   phone            String?
+  // Recuperar contraseña sin mail: pregunta elegida (clave de lib/security-questions) + respuesta hasheada.
+  securityQuestion       String?
+  securityAnswerHash     String?
+  securityFailedAttempts Int       @default(0)
+  securityLockedUntil    DateTime?
   role             Role      @default(CUSTOMER)
   onboardingSeenAt DateTime? // admin: ya vio el recorrido guiado
   createdAt        DateTime  @default(now())

@@ -54,7 +54,7 @@ export function Footer() {
               ["/preguntas-frecuentes", "Preguntas frecuentes"],
               ["/cambios-y-devoluciones", "Cambios y devoluciones"],
               ["/contacto", "Contacto"],
-              ["/cuenta/pedidos", "Seguir mi pedido"],
+              ["/seguir-pedido", "Seguir mi pedido"],
             ]}
           />
           <FooterColumn

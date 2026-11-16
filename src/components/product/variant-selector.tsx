@@ -132,7 +132,8 @@ export function VariantSelector({ variants, basePrice }: { variants: Variant[]; 
             <Plus className="size-4" />
           </button>
         </div>
-        <Button size="lg" className="flex-1" onClick={onAdd} loading={adding} disabled={allOut || (selected ? selected.stock === 0 : false)}>
+        {/* Solo flex-1 en fila: en columna (mobile) flex-basis 0 pisa el h-14 y el botón queda aplastado. */}
+        <Button size="lg" className="w-full shrink-0 sm:w-auto sm:flex-1" onClick={onAdd} loading={adding} disabled={allOut || (selected ? selected.stock === 0 : false)}>
           <ShoppingBag className="size-5" aria-hidden />
           {allOut ? "Sin stock" : `Agregar al carrito · ${formatMoney(price * qty)}`}
         </Button>

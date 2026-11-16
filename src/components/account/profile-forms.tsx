@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { changePassword, updateProfile, type AccountFormState } from "@/server/actions/account";
+import { changePassword, setSecurityQuestion, updateProfile, type AccountFormState } from "@/server/actions/account";
+import { SECURITY_QUESTIONS } from "@/lib/security-questions";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 
 function Notice({ state }: { state: AccountFormState }) {
@@ -29,6 +30,48 @@ export function ProfileForm({ name, email, phone }: { name: string; email: strin
         </Field>
         <Notice state={state} />
         <Button type="submit" loading={pending} className="self-start">Guardar</Button>
+      </form>
+    </Card>
+  );
+}
+
+export function SecurityQuestionForm({ currentQuestion }: { currentQuestion: string | null }) {
+  const [state, action, pending] = useActionState<AccountFormState, FormData>(setSecurityQuestion, {});
+  const configured = Boolean(currentQuestion);
+  return (
+    <Card>
+      <h2 className="font-sans text-lg font-semibold">Pregunta de seguridad</h2>
+      <p className="mb-4 mt-1 text-sm text-ink-soft">
+        Si te olvidás la contraseña, la respondés para elegir una nueva.
+      </p>
+      {!configured && (
+        <p className="mb-4 rounded-xl bg-warn-soft px-4 py-3 text-[15px] text-warn">
+          Todavía no tenés una pregunta configurada. Sin ella no vas a poder recuperar tu cuenta sola.
+        </p>
+      )}
+      <form action={action} className="flex flex-col gap-4" noValidate>
+        <Field label="Pregunta" htmlFor="sq-question" error={state.fieldErrors?.question}>
+          <Select id="sq-question" name="question" defaultValue={currentQuestion ?? ""} error={Boolean(state.fieldErrors?.question)}>
+            <option value="" disabled>
+              Elegí una pregunta
+            </option>
+            {Object.entries(SECURITY_QUESTIONS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label={configured ? "Nueva respuesta" : "Respuesta"} htmlFor="sq-answer" help="No importan mayúsculas ni tildes." error={state.fieldErrors?.answer}>
+          <Input id="sq-answer" name="answer" autoComplete="off" error={Boolean(state.fieldErrors?.answer)} />
+        </Field>
+        <Field label="Tu contraseña actual" htmlFor="sq-current" help="Para confirmar que sos vos." error={state.fieldErrors?.current}>
+          <Input id="sq-current" name="current" type="password" autoComplete="current-password" error={Boolean(state.fieldErrors?.current)} />
+        </Field>
+        <Notice state={state} />
+        <Button type="submit" variant="secondary" loading={pending} className="self-start">
+          {configured ? "Cambiar pregunta" : "Guardar pregunta"}
+        </Button>
       </form>
     </Card>
   );

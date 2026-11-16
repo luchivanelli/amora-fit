@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronRight, Package } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { LoginForm } from "@/components/auth/login-form";
 
@@ -40,6 +41,19 @@ export default async function LoginPage({ searchParams }: Props) {
         </p>
       )}
       <LoginForm callbackUrl={params.callbackUrl} />
+      <Link
+        href="/seguir-pedido"
+        className="mt-6 flex items-center gap-3 rounded-2xl border border-sand-dark/70 bg-sand/40 p-4 transition-colors hover:border-brand-400"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+          <Package className="size-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium text-ink">¿Compraste sin cuenta?</span>
+          <span className="block text-sm text-ink-soft">Seguí tu pedido con tu mail y teléfono.</span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-ink-muted" aria-hidden />
+      </Link>
       <p className="mt-6 border-t border-sand pt-5 text-center text-[15px] text-ink-soft">
         ¿Primera vez por acá?{" "}
         <Link href={`/registro${params.callbackUrl ? `?callbackUrl=${encodeURIComponent(params.callbackUrl)}` : ""}`} className="font-medium text-brand-700 underline-offset-4 hover:underline">

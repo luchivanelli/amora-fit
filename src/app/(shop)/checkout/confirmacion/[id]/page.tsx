@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney, orderNumber } from "@/lib/utils";
 import { ORDER_STATUS_LABELS } from "@/lib/labels";
 import { LinkButton } from "@/components/ui/button";
+import { emailsEnabled } from "@/lib/features";
 
 export const metadata: Metadata = { title: "Pedido confirmado", robots: { index: false } };
 
@@ -40,7 +41,11 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ i
         <p className="mt-2 text-lg text-ink-soft">
           Tu pedido <strong className="text-ink">{num}</strong> {paid ? "está confirmado y pagado." : agreed ? "quedó registrado." : "está esperando el pago."}
         </p>
-        <p className="mt-1 text-sm text-ink-muted">Te mandamos un mail a {order.contactEmail} con el detalle.</p>
+        <p className="mt-1 text-sm text-ink-muted">
+          {emailsEnabled()
+            ? `Te mandamos un mail a ${order.contactEmail} con el detalle.`
+            : "Guardá esta página o sacale una captura para tener el detalle de tu pedido."}
+        </p>
       </div>
 
       {agreed && !paid && (
@@ -61,7 +66,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ i
               </a>
             )}
           </div>
-          <p className="mt-4 text-sm text-ink-muted">Si preferís, esperá: la vendedora ya recibió tu pedido y te va a escribir.</p>
+          <p className="mt-4 text-sm text-ink-muted">Si preferís, esperá: ya recibimos tu pedido y te vamos a escribir.</p>
         </div>
       )}
 
@@ -95,6 +100,17 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        {/* El bloque "Ahora coordinamos juntas" ya trae su botón de WhatsApp; acá va para el resto de los estados. */}
+        {waNumber && !(agreed && !paid) && (
+          <a
+            href={`https://wa.me/${waNumber}?text=${encodeURIComponent(`¡Hola! Soy ${order.contactName}. Te escribo por mi pedido ${num} (${ORDER_STATUS_LABELS[order.status].toLowerCase()}).`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 font-medium text-white shadow-sm hover:bg-[#1ebe5b]"
+          >
+            <MessageCircle className="size-5" aria-hidden /> Consultar por WhatsApp
+          </a>
+        )}
         <LinkButton href="/tienda" variant="secondary">Seguir comprando</LinkButton>
         {order.userId && <LinkButton href={`/cuenta/pedidos/${order.id}`} variant="ghost">Ver en mi cuenta</LinkButton>}
       </div>

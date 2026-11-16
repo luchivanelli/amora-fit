@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { orderNumber } from "@/lib/utils";
 import { LinkButton } from "@/components/ui/button";
+import { emailsEnabled } from "@/lib/features";
 
 export const metadata: Metadata = { title: "Volviendo de Mercado Pago", robots: { index: false } };
 
@@ -26,7 +27,7 @@ export default async function ReturnPage({ searchParams }: Props) {
       ? { icon: CheckCircle2, tone: "text-brand-700 bg-brand-100", title: "¡Pago recibido!", text: paid ? "Tu pedido ya está confirmado. En breve lo preparamos." : "Mercado Pago aprobó el pago. En unos segundos se refleja en tu pedido." }
       : state === "rechazado" || state === "failure" || state === "rejected"
         ? { icon: XCircle, tone: "text-danger bg-danger-soft", title: "El pago no se pudo procesar", text: "No te preocupes, tu pedido sigue reservado por 24 horas. Podés intentar con otro medio de pago o escribirnos." }
-        : { icon: Clock, tone: "text-warn bg-warn-soft", title: "Pago pendiente", text: "Mercado Pago todavía está procesando el pago (pasa con transferencias o pagos en efectivo). Te avisamos por mail cuando se acredite." };
+        : { icon: Clock, tone: "text-warn bg-warn-soft", title: "Pago pendiente", text: `Mercado Pago todavía está procesando el pago (pasa con transferencias o pagos en efectivo). ${emailsEnabled() ? "Te avisamos por mail cuando se acredite." : "Podés volver a esta página más tarde para ver si se acreditó."}` };
 
   const Icon = content.icon;
 

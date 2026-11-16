@@ -1,5 +1,3 @@
-import Image from "next/image";
-import fondoIntimo from "@/images/fondo-intimo.jpeg";
 import { Wordmark } from "@/components/layout/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Blob } from "@/components/decor/blob";
@@ -9,9 +7,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <main className="relative grid min-h-dvh bg-cream lg:grid-cols-[1fr_1.1fr]">
       {/* Panel ilustrado (solo escritorio) */}
-      <aside className="relative hidden overflow-hidden lg:block" aria-hidden>
-        <Image src={fondoIntimo} alt="" fill placeholder="blur" sizes="45vw" className="theme-dim object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-scrim/75 via-scrim/20 to-scrim/10" />
+      <aside className="relative hidden overflow-hidden bg-brand-600 lg:block" aria-hidden>
+        {/* Formas suaves para que el verde no quede plano. */}
+        <div className="absolute -right-24 -top-24 size-96 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-32 -left-20 size-[28rem] rounded-full bg-black/15 blur-3xl" />
         <div className="absolute inset-x-0 bottom-0 p-12 text-white">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#d6dac3]">
             <Sparkle className="size-3 text-[#f2c4b8]" /> AMORA

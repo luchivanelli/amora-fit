@@ -36,7 +36,14 @@ export function MobileNav({ categories, isLoggedIn }: { categories: ShopCategory
   const drawer = (
     <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
       <div className="absolute inset-0 bg-scrim/50 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
-      <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm animate-fade-up flex-col overflow-hidden rounded-r-4xl bg-cream shadow-lift">
+      <div
+        className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm animate-fade-up flex-col overflow-hidden rounded-r-4xl bg-cream shadow-lift"
+        // Cerrar al tocar cualquier link: el efecto de `pathname` no alcanza cuando solo cambian los
+        // parámetros (/tienda?categoria=…) o cuando el link apunta a la página actual.
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("a")) setOpen(false);
+        }}
+      >
         <Blob tone="brand" blur className="-right-20 -top-24 size-72 opacity-80" />
         <Blob tone="blush" shape={2} blur className="-bottom-24 -left-16 size-64 opacity-70" />
         <div className="relative flex items-center justify-between px-5 py-4">

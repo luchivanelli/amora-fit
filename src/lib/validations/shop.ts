@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_QTY_PER_LINE } from "@/lib/cart-cookie";
+import { securityAnswerField, securityQuestionField } from "@/lib/validations/auth";
 
 const phone = z
   .string()
@@ -69,6 +70,8 @@ export const registerSchema = z
     email: z.string().trim().toLowerCase().email("Escribí un mail válido"),
     password: z.string().min(8, "La contraseña tiene que tener al menos 8 caracteres").max(200),
     confirm: z.string(),
+    securityQuestion: securityQuestionField,
+    securityAnswer: securityAnswerField,
   })
   .refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Las contraseñas no coinciden" });
 
