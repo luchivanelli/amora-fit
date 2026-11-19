@@ -6,15 +6,21 @@ export async function getDashboardData() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [newOrders, monthSales, lowStockMap, recentOrders, productCount, draftCount] = await Promise.all([
-    prisma.order.count({ where: { status: { in: ["PENDIENTE_ACUERDO", "PENDIENTE_PAGO", "PAGADO"] } } }),
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  // Mismo tramo del mes anterior (del 1 al día de hoy) para comparar parejo.
+  const prevMonthSameDay = new Date(prevMonthStart.getFullYear(), prevMonthStart.getMonth(), Math.min(now.getDate(), new Date(now.getFullYear(), now.getMonth(), 0).getDate()), now.getHours(), now.getMinutes());
+  const SOLD = ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"] as const;
+
+  const [newOrdersByStatus, monthSales, prevMonthSales, lowStockMap, recentOrders, productCount, draftCount] = await Promise.all([
+    prisma.order.groupBy({ by: ["status"], where: { status: { in: ["PENDIENTE_ACUERDO", "PENDIENTE_PAGO", "PAGADO"] } }, _count: true }),
     prisma.order.aggregate({
       _sum: { total: true },
       _count: true,
-      where: {
-        status: { in: ["PAGADO", "PREPARANDO", "ENVIADO", "ENTREGADO"] },
-        createdAt: { gte: monthStart },
-      },
+      where: { status: { in: [...SOLD] }, createdAt: { gte: monthStart } },
+    }),
+    prisma.order.aggregate({
+      _sum: { total: true },
+      where: { status: { in: [...SOLD] }, createdAt: { gte: prevMonthStart, lt: prevMonthSameDay } },
     }),
     getLowStockByProduct(),
     prisma.order.findMany({
@@ -41,12 +47,33 @@ export async function getDashboardData() {
     return p ? [{ id: p.id, name: p.name, imageUrl: p.images[0]?.url ?? null, colors: lowStockMap.get(id) ?? [] }] : [];
   });
 
+  const countOf = (s: string) => newOrdersByStatus.find((g) => g.status === s)?._count ?? 0;
+  const newOrders = {
+    total: newOrdersByStatus.reduce((a, g) => a + g._count, 0),
+    toAgree: countOf("PENDIENTE_ACUERDO"),
+    awaitingPayment: countOf("PENDIENTE_PAGO"),
+    paid: countOf("PAGADO"),
+  };
+
+  const groups = Array.from(lowStockMap.values());
+  const lowStockSummary = {
+    products: lowStockMap.size,
+    soldOutCombos: groups.flat().reduce((a, g) => a + g.sizes.filter((s) => s.stock === 0).length, 0),
+    lastUnitCombos: groups.flat().reduce((a, g) => a + g.sizes.filter((s) => s.stock === 1).length, 0),
+  };
+
+  const monthSalesTotal = Number(monthSales._sum.total ?? 0);
+  const prevTotal = Number(prevMonthSales._sum.total ?? 0);
+
   return {
     newOrders,
-    monthSalesTotal: Number(monthSales._sum.total ?? 0),
+    monthSalesTotal,
     monthSalesCount: monthSales._count,
+    monthAvgTicket: monthSales._count > 0 ? Math.round(monthSalesTotal / monthSales._count) : 0,
+    /** % vs. el mismo tramo del mes anterior; null si el mes anterior no tuvo ventas. */
+    monthChangePct: prevTotal > 0 ? Math.round(((monthSalesTotal - prevTotal) / prevTotal) * 100) : null,
     lowStock,
-    lowStockCount: lowStockMap.size,
+    lowStockSummary,
     recentOrders: recentOrders.map((o) => ({ ...o, total: Number(o.total) })),
     productCount,
     draftCount,

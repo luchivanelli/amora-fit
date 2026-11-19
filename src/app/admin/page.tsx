@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Package, AlertTriangle, TrendingUp, Plus, Shirt } from "lucide-react";
 import { formatLowStock } from "@/lib/stock";
 import { getDashboardData } from "@/server/queries/admin/dashboard";
-import { StatCard } from "@/components/admin/dashboard/stat-card";
+import { StatCard, StatRow } from "@/components/admin/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TONE, PAYMENT_METHOD_LABELS } from "@/lib/labels";
@@ -28,29 +28,58 @@ export default async function AdminHomePage() {
         <StatCard
           icon={Package}
           label="Pedidos nuevos"
-          value={String(data.newOrders)}
-          hint={data.newOrders === 0 ? "Todo al día" : "Esperan tu atención"}
+          value={String(data.newOrders.total)}
           href="/admin/pedidos?estado=nuevos"
-          tone={data.newOrders > 0 ? "brand" : "neutral"}
-        />
+          tone={data.newOrders.total > 0 ? "brand" : "neutral"}
+        >
+          {data.newOrders.total === 0 ? (
+            <p className="py-0.5">Todo al día. No hay pedidos esperando.</p>
+          ) : (
+            <>
+              <StatRow label="A acordar con la clienta" value={data.newOrders.toAgree} highlight={data.newOrders.toAgree > 0} />
+              {data.newOrders.awaitingPayment > 0 && <StatRow label="Esperando pago" value={data.newOrders.awaitingPayment} />}
+              <StatRow label="Pagados, para preparar" value={data.newOrders.paid} highlight={data.newOrders.paid > 0} />
+            </>
+          )}
+        </StatCard>
         <StatCard
           icon={AlertTriangle}
-          label="Productos con poco stock"
-          value={String(data.lowStockCount)}
-          hint="Algún talle y color con 1 o ninguna"
+          label="Poco stock"
+          value={String(data.lowStockSummary.products)}
           href="/admin/productos?estado=poco-stock"
-          tone={data.lowStockCount > 0 ? "warning" : "neutral"}
-        />
+          tone={data.lowStockSummary.products > 0 ? "warning" : "neutral"}
+        >
+          {data.lowStockSummary.products === 0 ? (
+            <p className="py-0.5">Todos los talles y colores tienen stock.</p>
+          ) : (
+            <>
+              <StatRow label="Talles agotados" value={data.lowStockSummary.soldOutCombos} highlight={data.lowStockSummary.soldOutCombos > 0} />
+              <StatRow label="Queda 1 sola" value={data.lowStockSummary.lastUnitCombos} />
+            </>
+          )}
+        </StatCard>
         <StatCard
           icon={TrendingUp}
           label="Ventas del mes"
           value={formatMoney(data.monthSalesTotal)}
-          hint={`${data.monthSalesCount} ${data.monthSalesCount === 1 ? "pedido pagado" : "pedidos pagados"}`}
+          badge={
+            data.monthChangePct === null
+              ? undefined
+              : {
+                  text: `${data.monthChangePct > 0 ? "+" : ""}${data.monthChangePct}%`,
+                  tone: data.monthChangePct > 0 ? "up" : data.monthChangePct < 0 ? "down" : "flat",
+                }
+          }
           href="/admin/pedidos"
-        />
+          tone="neutral"
+        >
+          <StatRow label={data.monthSalesCount === 1 ? "Pedido pagado" : "Pedidos pagados"} value={data.monthSalesCount} highlight />
+          <StatRow label="Ticket promedio" value={data.monthSalesCount > 0 ? formatMoney(data.monthAvgTicket) : "—"} />
+          {data.monthChangePct !== null && <p className="pt-1 text-xs text-ink-muted">Comparado con el mismo período del mes pasado.</p>}
+        </StatCard>
         <Link
           href="/admin/productos/nuevo"
-          className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-2xl bg-brand-600 p-5 text-center text-white shadow-sm transition-colors hover:bg-brand-hover"
+          className="flex min-h-44 flex-col items-center justify-center gap-2 rounded-2xl bg-brand-600 p-5 text-center text-white shadow-sm transition-colors hover:bg-brand-hover"
         >
           <span className="flex size-12 items-center justify-center rounded-full bg-white/20">
             <Plus className="size-7" aria-hidden />
