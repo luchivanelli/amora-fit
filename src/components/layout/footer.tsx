@@ -7,6 +7,7 @@ import { Sparkle } from "@/components/decor/sparkle";
 
 export function Footer() {
   const wa = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+  const email = process.env.CONTACT_EMAIL || process.env.SELLER_EMAIL;
   const year = new Date().getFullYear();
 
   return (
@@ -33,9 +34,15 @@ export function Footer() {
               <a href={process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://instagram.com"} target="_blank" rel="noopener noreferrer" className="flex size-11 items-center justify-center rounded-full bg-surface text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:text-blush-deep" aria-label="Instagram">
                 <Instagram className="size-5" />
               </a>
-              <Link href="/contacto" className="flex size-11 items-center justify-center rounded-full bg-surface text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:text-brand-700" aria-label="Contacto">
+              {/* Abre el programa de mail de la clienta (mismo mail que la tarjeta de /contacto). Sin mail configurado, va a contacto. */}
+              <a
+                href={email ? `mailto:${email}?subject=${encodeURIComponent("Consulta desde la tienda")}` : "/contacto"}
+                className="flex size-11 items-center justify-center rounded-full bg-surface text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:text-brand-700"
+                aria-label={email ? `Enviar un mail a ${email}` : "Contacto"}
+                title={email ?? "Contacto"}
+              >
                 <Mail className="size-5" />
-              </Link>
+              </a>
             </div>
           </div>
 
