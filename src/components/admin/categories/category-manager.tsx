@@ -13,6 +13,7 @@ import { createCategory, deleteCategory, renameCategory, reorderCategories } fro
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { inputClass } from "@/components/ui/field";
 
 export function CategoryManager({ tree: initial }: { tree: CategoryNode[] }) {
   const router = useRouter();
@@ -297,7 +298,9 @@ function InlineCreate({
         onKeyDown={(e) => e.key === "Escape" && onCancel()}
         placeholder={placeholder}
         maxLength={60}
-        className="h-12 flex-1 rounded-xl border border-sand-dark px-4 text-base focus:border-brand-500"
+        // En celular el form es columna: `flex-1` ahí pone flex-basis 0 y aplasta el alto (h-12),
+        // por eso solo se estira en fila (sm:). Mismo estilo que el resto de los campos del panel.
+        className={inputClass(false, "min-w-0 shrink-0 sm:flex-1")}
         aria-label={placeholder}
       />
       <div className="flex gap-2">

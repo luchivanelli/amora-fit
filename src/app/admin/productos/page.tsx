@@ -80,12 +80,13 @@ export default async function ProductsPage({ searchParams }: Props) {
         </>
       )}
 
-      {/* Botón flotante en celular */}
+      {/* Botón flotante en celular. Queda 1rem arriba de la barra inferior, que mide
+          3.5rem + el padding de .safe-bottom (max(safe-area, 0.75rem)); así no se pisa en iPhone. */}
       <Link
         href="/admin/productos/nuevo"
-        className="fixed bottom-20 right-4 z-30 inline-flex h-14 items-center gap-2 rounded-full bg-brand-600 pl-4 pr-5 text-base font-semibold text-white shadow-lg hover:bg-brand-hover sm:hidden"
+        className="fixed bottom-[calc(4.5rem+max(env(safe-area-inset-bottom),0.75rem))] right-4 z-30 inline-flex h-12 items-center gap-1.5 rounded-full bg-brand-600 pl-3.5 pr-4 text-[15px] font-semibold text-white shadow-lg hover:bg-brand-hover sm:hidden"
       >
-        <Plus className="size-6" aria-hidden /> Agregar producto
+        <Plus className="size-5" aria-hidden /> Agregar producto
       </Link>
     </div>
   );

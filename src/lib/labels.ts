@@ -57,7 +57,7 @@ export function getProductDisplayStatus(p: {
   return "publicado";
 }
 
-export const LOW_STOCK_THRESHOLD = 3;
+export { LOW_STOCK_THRESHOLD } from "@/lib/stock";
 
 export const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 export const DEFAULT_NUMERIC_SIZES = ["80", "85", "90", "95", "100"];

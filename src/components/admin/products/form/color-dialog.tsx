@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Check, Plus, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -9,6 +10,7 @@ import { Swatch } from "@/components/ui/swatch";
 import { DEFAULT_COLORS } from "@/lib/labels";
 import { joinColorNames, joinHexes, MAX_TONES_PER_COLOR } from "@/lib/colors";
 import { cn } from "@/lib/utils";
+import { deleteSavedColor, listSavedColors, saveColor, type SavedColorDTO } from "@/server/actions/admin/colors";
 
 type Tone = { name: string; hex: string };
 
@@ -32,6 +34,38 @@ export function ColorDialog({ open, onClose, onAdd, existing }: Props) {
   const [nameTouched, setNameTouched] = useState(false);
   const [customHex, setCustomHex] = useState(DEFAULT_CUSTOM_HEX);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState<SavedColorDTO[] | null>(null);
+
+  // Colores guardados: se cargan cada vez que se abre el diálogo.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    void listSavedColors().then((res) => {
+      if (alive) setSaved(res.ok ? res.data : []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [open]);
+
+  const isInProduct = (n: string) => existing.some((c) => c.toLowerCase() === n.trim().toLowerCase());
+
+  const addSaved = (c: SavedColorDTO) => {
+    if (isInProduct(c.name)) return setError(`${c.name} ya está en este producto.`);
+    onAdd({ name: c.name, hex: c.hex });
+    void saveColor(c); // lo sube al principio de la lista (más reciente)
+    close();
+  };
+
+  const removeSaved = (c: SavedColorDTO) => {
+    setSaved((list) => list?.filter((x) => x.id !== c.id) ?? null);
+    void deleteSavedColor(c.id).then((res) => {
+      if (!res.ok) {
+        toast.error(res.error);
+        setSaved((list) => (list ? [c, ...list] : list));
+      }
+    });
+  };
 
   const suggestedName = joinColorNames(tones.map((t) => t.name));
   const finalName = nameTouched ? name : suggestedName;
@@ -69,8 +103,12 @@ export function ColorDialog({ open, onClose, onAdd, existing }: Props) {
     if (tones.length === 0) return setError("Marcá al menos un tono.");
     const clean = finalName.trim();
     if (clean.length < 1) return setError("Poné un nombre al color (por ejemplo, Lila).");
-    if (existing.some((c) => c.toLowerCase() === clean.toLowerCase())) return setError("Ese color ya está en la lista.");
+    if (isInProduct(clean)) return setError("Ese color ya está en la lista.");
     onAdd({ name: clean, hex: combinedHex });
+    // Queda registrado para usarlo en otros productos.
+    void saveColor({ name: clean, hex: combinedHex }).then((res) => {
+      if (!res.ok) toast.error("El color se agregó, pero no se pudo guardar en tus colores.");
+    });
     close();
   };
 
@@ -88,8 +126,43 @@ export function ColorDialog({ open, onClose, onAdd, existing }: Props) {
         }}
         className="flex flex-col gap-5"
       >
+        {saved && saved.length > 0 && (
+          <div>
+            <p className="mb-2 text-[15px] font-medium">Tus colores</p>
+            <ul className="flex flex-wrap gap-2">
+              {saved.map((c) => {
+                const used = isInProduct(c.name);
+                return (
+                  <li key={c.id} className={cn("group flex items-center rounded-full border border-sand-dark bg-surface", used && "opacity-50")}>
+                    <button
+                      type="button"
+                      onClick={() => addSaved(c)}
+                      disabled={used}
+                      className="flex h-10 items-center gap-2 rounded-l-full pl-1.5 pr-2 text-sm font-medium hover:bg-sand/60 disabled:cursor-not-allowed"
+                      title={used ? "Ya está en este producto" : `Agregar ${c.name}`}
+                    >
+                      <Swatch hex={c.hex} className="size-7" />
+                      {c.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeSaved(c)}
+                      className="flex h-10 w-8 items-center justify-center rounded-r-full text-ink-muted hover:bg-sand/60 hover:text-ink"
+                      aria-label={`Quitar ${c.name} de tus colores`}
+                      title="Quitar de tus colores (no cambia los productos)"
+                    >
+                      <X className="size-3.5" aria-hidden />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-2 text-sm text-ink-muted">Tocá uno para agregarlo. O armá uno nuevo abajo.</p>
+          </div>
+        )}
+
         <div>
-          <p className="mb-2 text-[15px] font-medium">Tonos</p>
+          <p className="mb-2 text-[15px] font-medium">{saved && saved.length > 0 ? "Nuevo color" : "Tonos"}</p>
           <div className="flex flex-wrap gap-2">
             {DEFAULT_COLORS.map((c) => {
               const picked = isPicked(c.hex);

@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { LOW_STOCK_THRESHOLD } from "@/lib/labels";
+import { getLowStockByProduct } from "@/server/queries/admin/products";
+import { minLowStock } from "@/lib/stock";
 
 export async function getDashboardData() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [newOrders, monthSales, lowStockVariants, recentOrders, productCount, draftCount] = await Promise.all([
+  const [newOrders, monthSales, lowStockMap, recentOrders, productCount, draftCount] = await Promise.all([
     prisma.order.count({ where: { status: { in: ["PENDIENTE_ACUERDO", "PENDIENTE_PAGO", "PAGADO"] } } }),
     prisma.order.aggregate({
       _sum: { total: true },
@@ -15,22 +16,7 @@ export async function getDashboardData() {
         createdAt: { gte: monthStart },
       },
     }),
-    prisma.productVariant.findMany({
-      where: {
-        stock: { lte: LOW_STOCK_THRESHOLD },
-        isActive: true,
-        product: { deletedAt: null, status: "ACTIVE" },
-      },
-      select: {
-        id: true,
-        size: true,
-        color: true,
-        stock: true,
-        product: { select: { id: true, name: true, images: { where: { isMain: true }, take: 1, select: { url: true } } } },
-      },
-      orderBy: { stock: "asc" },
-      take: 30,
-    }),
+    getLowStockByProduct(),
     prisma.order.findMany({
       orderBy: { createdAt: "desc" },
       take: 6,
@@ -40,25 +26,27 @@ export async function getDashboardData() {
     prisma.product.count({ where: { deletedAt: null, status: "DRAFT" } }),
   ]);
 
-  // Agrupar poco stock por producto para que la lista sea corta y clara.
-  const lowStockByProduct = new Map<string, { id: string; name: string; imageUrl: string | null; variants: { label: string; stock: number }[] }>();
-  for (const v of lowStockVariants) {
-    const entry = lowStockByProduct.get(v.product.id) ?? {
-      id: v.product.id,
-      name: v.product.name,
-      imageUrl: v.product.images[0]?.url ?? null,
-      variants: [],
-    };
-    entry.variants.push({ label: `${v.size} · ${v.color}`, stock: v.stock });
-    lowStockByProduct.set(v.product.id, entry);
-  }
+  // Poco stock por talle + color, los más urgentes primero (agotados antes que los de 1).
+  const urgentIds = Array.from(lowStockMap.entries())
+    .sort(([, a], [, b]) => minLowStock(a) - minLowStock(b))
+    .slice(0, 8)
+    .map(([id]) => id);
+  const products = await prisma.product.findMany({
+    where: { id: { in: urgentIds } },
+    select: { id: true, name: true, images: { where: { isMain: true }, take: 1, select: { url: true } } },
+  });
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const lowStock = urgentIds.flatMap((id) => {
+    const p = byId.get(id);
+    return p ? [{ id: p.id, name: p.name, imageUrl: p.images[0]?.url ?? null, colors: lowStockMap.get(id) ?? [] }] : [];
+  });
 
   return {
     newOrders,
     monthSalesTotal: Number(monthSales._sum.total ?? 0),
     monthSalesCount: monthSales._count,
-    lowStock: Array.from(lowStockByProduct.values()).slice(0, 8),
-    lowStockCount: lowStockByProduct.size,
+    lowStock,
+    lowStockCount: lowStockMap.size,
     recentOrders: recentOrders.map((o) => ({ ...o, total: Number(o.total) })),
     productCount,
     draftCount,

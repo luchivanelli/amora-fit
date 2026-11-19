@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getProductDisplayStatus, LOW_STOCK_THRESHOLD, type ProductDisplayStatus } from "@/lib/labels";
 import { getCategoryIdsWithChildren } from "@/server/queries/admin/categories";
+import { lowStockGroups, type LowStockGroup } from "@/lib/stock";
 
 export const PRODUCTS_PAGE_SIZE = 20;
 
@@ -17,11 +18,32 @@ export type ProductListItem = {
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
   isArchived: boolean;
   isFeatured: boolean;
+  /** Talles con poco stock (≤ LOW_STOCK_THRESHOLD), agrupados por color. */
+  lowStock: LowStockGroup[];
   imageUrl: string | null;
   categoryName: string;
   updatedAt: string;
   variants: { id: string; size: string; color: string; stock: number }[];
 };
+
+/** Condición Prisma: el producto tiene alguna combinación talle + color con poco stock. */
+const hasLowStockVariant: Prisma.ProductVariantListRelationFilter = {
+  some: { isActive: true, stock: { lte: LOW_STOCK_THRESHOLD } },
+};
+
+/**
+ * Productos publicados con alguna combinación talle + color con poco stock.
+ * Devuelve productId → talles con poco stock agrupados por color.
+ */
+export async function getLowStockByProduct() {
+  const rows = await prisma.productVariant.findMany({
+    where: { isActive: true, stock: { lte: LOW_STOCK_THRESHOLD }, product: { deletedAt: null, status: "ACTIVE" } },
+    select: { productId: true, size: true, color: true, stock: true },
+  });
+  const byProduct = new Map<string, typeof rows>();
+  for (const r of rows) byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
+  return new Map(Array.from(byProduct, ([id, variants]) => [id, lowStockGroups(variants)]));
+}
 
 export async function listProducts(params: { q?: string; categoria?: string; estado?: string; page?: number }) {
   const page = Math.max(1, params.page ?? 1);
@@ -47,7 +69,7 @@ export async function listProducts(params: { q?: string; categoria?: string; est
     where.variants = { none: { stock: { gt: 0 } } };
   } else if (estado === "poco-stock") {
     where.status = "ACTIVE";
-    where.variants = { some: { stock: { lte: LOW_STOCK_THRESHOLD } } };
+    where.variants = hasLowStockVariant;
   } else if (estado === "destacados") {
     where.isFeatured = true;
   }
@@ -87,6 +109,8 @@ export async function listProducts(params: { q?: string; categoria?: string; est
       status: p.status,
       isArchived: p.deletedAt !== null,
       isFeatured: p.isFeatured,
+      // Si el producto entero está sin stock ya lo dice el estado; no repetimos color por color.
+      lowStock: totalStock > 0 ? lowStockGroups(p.variants) : [],
       imageUrl: p.images[0]?.url ?? null,
       categoryName: p.category.name,
       updatedAt: p.updatedAt.toISOString(),

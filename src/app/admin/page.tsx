@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Package, AlertTriangle, TrendingUp, Plus, Shirt } from "lucide-react";
+import { formatLowStock } from "@/lib/stock";
 import { getDashboardData } from "@/server/queries/admin/dashboard";
 import { StatCard } from "@/components/admin/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ export default async function AdminHomePage() {
           icon={AlertTriangle}
           label="Productos con poco stock"
           value={String(data.lowStockCount)}
-          hint="3 unidades o menos"
+          hint="Algún talle y color con 1 o ninguna"
           href="/admin/productos?estado=poco-stock"
           tone={data.lowStockCount > 0 ? "warning" : "neutral"}
         />
@@ -118,7 +119,7 @@ export default async function AdminHomePage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{p.name}</p>
                       <p className="truncate text-sm text-ink-muted">
-                        {p.variants.map((v) => `${v.label}: ${v.stock}`).join(" · ")}
+                        {p.colors.map(formatLowStock).join(" / ")}
                       </p>
                     </div>
                   </Link>

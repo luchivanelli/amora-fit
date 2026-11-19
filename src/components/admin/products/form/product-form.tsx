@@ -341,8 +341,9 @@ export function ProductForm({ product, categories }: Props) {
         </aside>
       </div>
 
-      {/* Barra fija inferior en celular */}
-      <div className="fixed inset-x-0 bottom-16 z-30 border-t border-sand-dark/60 bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
+      {/* Barra fija inferior en celular, apoyada justo sobre la barra de navegación
+          (3.5rem + 1px de borde + el padding de .safe-bottom), así no queda tapada en iPhone. */}
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+1px+max(env(safe-area-inset-bottom),0.75rem))] z-30 border-t border-sand-dark/60 bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-6xl gap-2">
           <Button variant="secondary" onClick={onDraftClick} loading={busy === "draft"} disabled={busy !== null} className="flex-1">
             {isPublished ? "Ocultar" : "Guardar borrador"}

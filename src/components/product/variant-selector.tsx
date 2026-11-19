@@ -6,8 +6,15 @@ import { useCart } from "@/components/cart/cart-provider";
 import { Button } from "@/components/ui/button";
 import { cn, formatMoney } from "@/lib/utils";
 import { MAX_QTY_PER_LINE } from "@/lib/cart-cookie";
+import { LOW_STOCK_THRESHOLD } from "@/lib/stock";
 import { Swatch } from "@/components/ui/swatch";
 import { useSelectedColor } from "@/components/product/color-context";
+
+/** "queda 1 unidad" / "quedan 3 unidades" (con `solo`: "queda solo 1 unidad"). */
+function unitsLeft(n: number, solo = false) {
+  return `${n === 1 ? "queda" : "quedan"}${solo ? " solo" : ""} ${n} ${n === 1 ? "unidad" : "unidades"}`;
+}
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 type Variant = { id: string; size: string; color: string; colorHex: string | null; stock: number; price: number };
 
@@ -34,6 +41,7 @@ export function VariantSelector({ variants, basePrice }: { variants: Variant[]; 
   const maxQty = selected ? Math.min(selected.stock, MAX_QTY_PER_LINE) : MAX_QTY_PER_LINE;
   const price = selected?.price ?? basePrice;
   const allOut = variants.every((v) => v.stock === 0);
+  const colorLeft = color ? stockFor(size, color) : 0;
 
   const onAdd = async () => {
     setTouched(true);
@@ -85,15 +93,17 @@ export function VariantSelector({ variants, basePrice }: { variants: Variant[]; 
         </legend>
         <div className="flex flex-wrap gap-2">
           {colors.map((c) => {
-            const available = stockFor(size, c.name) > 0;
+            const left = stockFor(size, c.name);
+            const available = left > 0;
+            const few = available && left <= LOW_STOCK_THRESHOLD;
             return (
               <button
                 key={c.name}
                 type="button"
                 onClick={() => setColor(c.name)}
                 aria-pressed={color === c.name}
-                aria-label={`Color ${c.name}${available ? "" : ", sin stock"}`}
-                title={c.name}
+                aria-label={`Color ${c.name}${available ? (few ? `, ${unitsLeft(left)}` : "") : ", sin stock"}`}
+                title={few ? `${c.name} · ¡${unitsLeft(left)}!` : c.name}
                 className={cn(
                   "relative flex size-12 items-center justify-center rounded-full border-2 transition",
                   color === c.name ? "border-ink" : "border-transparent hover:border-sand-dark",
@@ -102,6 +112,7 @@ export function VariantSelector({ variants, basePrice }: { variants: Variant[]; 
               >
                 <Swatch hex={c.hex} className="size-8" />
                 {!available && <span className="absolute h-px w-9 rotate-45 bg-ink" aria-hidden />}
+                {few && <span className="absolute right-0.5 top-0.5 size-3 rounded-full border-2 border-surface bg-warn" aria-hidden />}
               </button>
             );
           })}
@@ -113,9 +124,14 @@ export function VariantSelector({ variants, basePrice }: { variants: Variant[]; 
         )}
       </fieldset>
 
-      {selected && selected.stock > 0 && selected.stock <= 3 && (
+      {selected && selected.stock > 0 && selected.stock <= LOW_STOCK_THRESHOLD && (
         <p className="text-sm font-medium text-warn">
-          ¡Quedan solo {selected.stock} {selected.stock === 1 ? "unidad" : "unidades"} de esta combinación!
+          ¡{capitalize(unitsLeft(selected.stock, true))} en talle {selected.size}, color {selected.color}!
+        </p>
+      )}
+      {!selected && color && colorLeft > 0 && colorLeft <= LOW_STOCK_THRESHOLD && (
+        <p className="text-sm font-medium text-warn">
+          ¡{capitalize(unitsLeft(colorLeft, true))} en {color}!
         </p>
       )}
       {selected && selected.stock === 0 && <p className="text-sm font-medium text-ink-soft">Esa combinación está agotada por ahora. Probá otro talle o color.</p>}

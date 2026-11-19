@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Store } from "lucide-react";
 import { logoutAction } from "@/server/actions/auth";
 import { Wordmark } from "@/components/layout/wordmark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -9,7 +10,17 @@ export function TopBar({ userName }: { userName: string }) {
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-sand-dark/60 bg-surface/95 px-4 backdrop-blur lg:hidden">
       <Wordmark href="/admin" size="sm" />
       <div className="flex items-center gap-1">
-        <span className="max-w-28 truncate text-sm text-ink-soft">{userName}</span>
+        {/* <span className="max-w-24 truncate text-sm text-ink-soft">{userName}</span> */}
+        {/* Igual que "Ver mi tienda" de la barra lateral de escritorio: abre en otra pestaña. */}
+        <Link
+          href="/"
+          target="_blank"
+          className="flex size-10 items-center justify-center rounded-xl text-ink-muted hover:bg-sand hover:text-ink"
+          aria-label="Ver mi tienda"
+          title="Ver mi tienda"
+        >
+          <Store className="size-5" />
+        </Link>
         <ThemeToggle className="size-10" />
         <form action={logoutAction}>
           <button
